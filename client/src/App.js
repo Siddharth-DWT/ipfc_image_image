@@ -3,9 +3,17 @@ import SimpleStorageContract from "./contracts/SimpleStorage.json";
 import getWeb3 from "./getWeb3";
 import ifsc from "./ipfs";
 import "./App.css";
+import ipfs from "./ipfs";
 
 class App extends Component {
-  state = { storageValue: 0, web3: null, accounts: null, contract: null };
+  constructor(props) {
+    super(props);
+
+    this.state = { storageValue: 0, web3: null, accounts: null, contract: null, buffer: null, ipfsHash: "" };
+
+    this.handleCaptured = this.handleCaptured.bind(this);
+    this.onSubmit = this.onSubmit.bind(this);
+  }
 
   componentDidMount = async () => {
     try {
@@ -47,20 +55,46 @@ class App extends Component {
     this.setState({ storageValue: response });
   };
 
+  handleCaptured(e) {
+    // e.preventDefault();
+    const file = e.target.files[0];
+    const reader = new window.FileReader();
+    reader.readAsArrayBuffer(file);
+    reader.onloadend = () => {
+      this.setState({ buffer: Buffer(reader.result) });
+      console.log("buffer", this.state.buffer);
+    };
+  }
+  onSubmit(e) {
+    e.preventDefault();
+    ipfs.files.add(this.state.buffer, (error, result) => {
+      if (error) {
+        console.error("error in adding file", error);
+        return true;
+      }
+      console.log("result", result);
+      // return this.setState({ ipfsHash: result[0].hash });
+    });
+    console.log("submitted");
+  }
   render() {
     if (!this.state.web3) {
       return <div>Loading Web3, accounts, and contract...</div>;
     }
     return (
       <div className="App">
-        <h1>Good to Go!</h1>
         <p>Your Truffle Box is installed and ready.</p>
-        <h2>Smart Contract Example</h2>
         <p>If your contracts compiled and migrated successfully, below will show a stored value of 5 (by default).</p>
-        <p>
-          Try changing the value stored on <strong>line 42</strong> of App.js.
-        </p>
+
         <div>The stored value is: {this.state.storageValue}</div>
+
+        <h1>IPFS Upload Files DApp</h1>
+        <p>This image is uploaded on IPFS and etherium blockchain</p>
+        <img src="" alt=""></img>
+        <form onSubmit={this.onSubmit}>
+          <input type="file" onChange={this.handleCaptured} />
+          <input type="submit" />
+        </form>
       </div>
     );
   }
