@@ -1,0 +1,3 @@
+node_modules/.bin/ganache
+client/src/contracts/Migrations.json
+node_modules
