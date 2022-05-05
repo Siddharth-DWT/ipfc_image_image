@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { CID, IPFSHTTPClient } from "ipfs-http-client";
 import getWeb3 from "./getWeb3";
-import ipfs from "./ipfs";
+import { ipfs, ipfsDag } from "./ipfs";
 import ABI from "./MyNft.json";
 import "./App.css";
-import { useDropzone } from "react-dropzone";
 
 const App = () => {
   const [storageValue, setStorageValue] = useState<number>(5);
   const [web3, setWeb3] = useState();
   const [accounts, setAccounts] = useState();
   const [contract, setContract] = useState();
-  const [uploadedFile, setUploadedFile] = useState<{ cid: CID; path: string }>();
+  const [uploadedFile, setUploadedFile] = useState<{ cid: CID; path: string }[]>([]);
   const ref = useRef<HTMLInputElement>(null);
 
   const ADDRESS = "0xCA79577D4767A968F7Daf8b19d9BAE4997E5d75b";
@@ -28,7 +27,6 @@ const App = () => {
     const web3 = await getWeb3();
     const accounts = await web3.eth.getAccounts();
     const response = await (contract as any).methods.get().call();
-    // await (contract as any).methods.set(10).send({ from: accounts[0] });
     setAccounts(accounts[0]);
     setStorageValue(response);
   };
@@ -36,26 +34,60 @@ const App = () => {
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
-    const file = (form[0] as HTMLInputElement).files;
-    if (!file || file.length === 0) {
+    const files = (form[0] as HTMLInputElement).files;
+
+    if (!files || files.length === 0) {
       return alert("No file selected");
     }
-    const result = await (ipfs as IPFSHTTPClient).add(Array.from(file)[0]);
-    console.log("results-cid : ", result.cid);
-    console.log("results-path : ", result.path);
-    setUploadedFile({
-      cid: result.cid,
-      path: result.path,
-    });
-  };
 
-  // useEffect(() => {
-  //   if (ref.current !== null) {
-  //     ref.current.setAttribute("directory", "");
-  //     ref.current.setAttribute("webkitdirectory", "");
-  //     console.log(ref.current);
-  //   }
-  // }, [ref]);
+    const filesAsArray = Array.from(files);
+
+    if (filesAsArray[0].webkitRelativePath === "") {
+      // files or bunch of files
+
+      // console.log("filesAsArray", filesAsArray);
+      filesAsArray.forEach(async (file: any, index: number) => {
+        //   console.log("file inside loop", file);
+        const result = await (ipfs as IPFSHTTPClient).add(file);
+        //   console.log("results-cid : ", result.cid);
+        //   console.log("results-path : ", result.path);
+        console.log(`full-url : https://ipfs.io/ipfs/${result.path}`);
+        setUploadedFile([
+          ...uploadedFile,
+          {
+            cid: result.cid,
+            path: result.path,
+          },
+        ]);
+      });
+    } else {
+      // folder
+
+      await (ipfsDag as any).patch.addLink(
+        files[1] as any,
+        {
+          name: "some-link",
+          size: 10,
+          multihash: "QmV49SZxAbe5gp5C6E8VkwXuSD7QdxRA1qjGgdFAVjMKSV",
+        } as any
+      );
+    }
+
+    //   filesAsArray.forEach(async (file: any, index: number) => {
+    //     console.log("file", file);
+    //     const result = await (ipfs as IPFSHTTPClient).add(
+    //       {
+    //         path: `images/${file.name}`,
+    //         content: file,
+    //       }
+    //       //   { wrapWithDirectory: true }
+    //     );
+    //     console.log("result", result);
+    //     console.log("results-cid : ", result.cid);
+    //     console.log("results-path : ", result.path);
+    //   });
+    // }
+  };
 
   useEffect(() => {
     const get = async () => {
@@ -94,7 +126,7 @@ const App = () => {
       </form>
       {uploadedFile ? <p style={{ color: "green" }}>File has been uploaded successfully</p> : <p>No file have been uploaded till yet</p>}
       <br />
-      {uploadedFile && <p>Genearted Hash : {uploadedFile.path}</p>}
+      {/* {uploadedFile && <p>Genearted Hash : {uploadedFile.path}</p>} */}
       <p>-------------------------------------------------</p>
       <br />
       <button onClick={handleMintNFT} className="button-62">

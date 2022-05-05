@@ -10,4 +10,13 @@ try {
   ipfs = undefined;
 }
 
-export default ipfs;
+let ipfsDag: IPFSHTTPClient | undefined;
+try {
+  ipfsDag = create({
+    url: "https://ipfs.infura.io:5001/api/v0/dag",
+  });
+} catch (error) {
+  console.error("IPFS error ", error);
+  ipfsDag = undefined;
+}
+export { ipfs, ipfsDag };
